@@ -1,0 +1,29 @@
+name: app maven release
+on:
+  workflow_call:
+    inputs:
+      os_version:
+        description: "pipeline operating system"
+        type: string
+        default: "ubuntu-24.04"
+        required: true
+
+jobs:
+  build:
+    name: build
+    runs-on: inputs.os_version
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup JDK11
+        uses: actions/setup-java@v4
+        with:
+          java-version: 11
+          distribution: "correto"
+          cache: maven
+
+      - name: build
+        run: mvn -Dmaven.test.skip=true -Ddependency-check.skip=true install
+
+      - name: test
+        run: mvn clean test

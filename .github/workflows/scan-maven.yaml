@@ -1,0 +1,32 @@
+name: scan maven application
+on:
+  workflow_call:
+    inputs:
+      os_version:
+        description: "pipeline operating system"
+        type: string
+        default: "ubuntu-24.04"
+        required: true
+
+jobs:
+  test:
+    runs-on: inputs.os_version
+    steps:
+      - name: check out
+        uses: actions/checkout@v3
+
+      - name: test
+        run: |
+          mvn --batch-mode -Dmaven.test.failure.ignore=true test
+          ls -la
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: maven-test
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: true
+
+  scan:
