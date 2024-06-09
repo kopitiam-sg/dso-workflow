@@ -25,5 +25,10 @@ jobs:
       - name: build
         run: mvn -Dmaven.test.skip=true -Ddependency-check.skip=true install
 
+  test:
+    name: test
+    runs-on: ${{inputs.os_version }}
+    needs: [build]
+    steps:
       - name: test
         run: mvn clean test
