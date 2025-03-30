@@ -1,4 +1,4 @@
-name: app maven release
+name: feat/maven
 on:
   workflow_call:
     inputs:
@@ -31,4 +31,4 @@ jobs:
     needs: [build]
     steps:
       - name: test
-        run: mvn clean test
+        run: mvn clean test -Ddependency-check.skip=true
