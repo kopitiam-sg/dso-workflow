@@ -10,25 +10,63 @@ on:
 
 jobs:
   build:
-    name: build
-    runs-on: ${{inputs.os_version}}
+    name: Build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: setup JDK11
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           java-version: 11
           distribution: "corretto"
-          cache: maven
 
-      - name: build
-        run: mvn -Dmaven.test.skip=true -Ddependency-check.skip=true install
+      - name: Cache Maven packages to speed up build
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: setup-java-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: setup-java-${{ runner.os }}-maven
+
+      - name: Build
+        id: build
+        run: |
+          mvn -Dmaven.test.skip=true -Ddependency-check.skip=true clean install
 
   test:
-    name: test
-    runs-on: ${{inputs.os_version }}
+    name: Test
+    runs-on: ubuntu-22.04
     needs: [build]
+    permissions: write-all
     steps:
-      - name: test
-        run: mvn clean test -Ddependency-check.skip=true
+      - uses: actions/checkout@v4
+
+      - name: Restore maven packages to speed up build
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: setup-java-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: setup-java-${{ runner.os }}-maven
+
+      - name: Test
+        run: |
+          mvn --batch-mode test
+          # mvn --batch-mode -Dmaven.test.failure.ignore=true test
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: maven-test
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: true
+
+      # uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
+      # ignore maven wrapper
+      - name: Update dependency graph
+        uses: advanced-security/maven-dependency-submission-action@v4.1.1
+        with:
+          ignore-maven-wrapper: true
